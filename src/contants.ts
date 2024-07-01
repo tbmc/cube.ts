@@ -75,7 +75,7 @@ export const edgeColor = [
   ['B', 'R'],
 ];
 
-export const faceNums = {
+export const faceNums: Record<string, number> = {
   U: 0,
   R: 1,
   F: 2,
@@ -96,7 +96,7 @@ export const faceNums = {
   b: 17,
 };
 
-export const faceNames = {
+export const faceNames: Record<string, string> = {
   0: 'U',
   1: 'R',
   2: 'F',

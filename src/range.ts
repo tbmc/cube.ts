@@ -1,4 +1,4 @@
-﻿export function range(left: number, right: number, inclusive: boolean) {
+﻿export function range(left: number, right: number, inclusive: boolean): number[] {
   let range: number[] = [];
   let ascending = left < right;
   let end = !inclusive ? right : ascending ? right + 1 : right - 1;

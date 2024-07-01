@@ -1,6 +1,7 @@
 ﻿// 8 values are encoded in one number
 import { range } from './range';
 import { allMoves2 } from './contants';
+import { Vector2Or3 } from './types';
 
 // Phase 1: All moves are valid
 const allMoves1 = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17];
@@ -64,9 +65,9 @@ function pruning(table: number[], index: number, value: number | null = null) {
 export function computePruningTable(
   phase: number,
   size: number,
-  currentCoords: (arg0: number) => any,
-  nextIndex: (arg0: any, arg1: any) => any,
-) {
+  currentCoords: (coordonate: number) => Vector2Or3,
+  nextIndex: (current: Vector2Or3, move: number) => number,
+): number[] {
   // Initialize all values to 0xF
   let moves: number[];
   const table = range(0, Math.ceil(size / 8) - 1, true).map((x: any) => 0xffffffff);

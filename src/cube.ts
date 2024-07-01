@@ -11,6 +11,16 @@ import {
   L,
   R,
   U,
+  DRB,
+  URF,
+  BR,
+  UR,
+  DLF,
+  UL,
+  DF,
+  UB,
+  FR,
+  faceNums,
 } from './contants';
 import { Move, moveList } from './moveList';
 import {
@@ -18,6 +28,182 @@ import {
   generateValidRandomPermutation,
   parseAlg,
 } from './utilFunctions';
+import { permutationIndex } from './solveUtilFunction';
+import { range } from './range';
+import {
+  moveTableParams,
+  N_FLIP,
+  N_PARITY,
+  N_SLICE1,
+  N_SLICE2,
+  N_TWIST,
+  N_URFtoDLF,
+  N_URtoDF,
+} from './moveTables';
+import { computePruningTable } from './pruning';
+import { solveUpright } from './solveUpright';
+import { Vector2Or3 } from './types';
+
+// Because we only have the phase 2 URtoDF coordinates, we need to
+// merge the URtoUL and UBtoDF coordinates to URtoDF in the beginning
+// of phase 2.
+const mergeURtoDF = (() => {
+  const a = new Cube();
+  const b = new Cube();
+
+  return (URtoUL: number, UBtoDF: number) => {
+    // Collisions can be found because unset are set to -1
+    a.URtoUL(URtoUL);
+    b.UBtoDF(UBtoDF);
+
+    for (let i = 0; i <= 7; i++) {
+      if (a.ep[i] !== -1) {
+        if (b.ep[i] !== -1) {
+          return -1; // collision
+        } else {
+          b.ep[i] = a.ep[i];
+        }
+      }
+    }
+
+    return b.URtoDF();
+  };
+})();
+
+type PruningTableParam = [
+  number,
+  number,
+  (index: number) => Vector2Or3,
+  (current: Vector2Or3, move: number) => number,
+];
+const pruningTableParams: Record<string, PruningTableParam> = {
+  // name: [phase, size, currentCoords, nextIndex]
+  sliceTwist: [
+    1,
+    N_SLICE1 * N_TWIST,
+    (index: number) => [index % N_SLICE1, (index / N_SLICE1) | 0],
+    function (current: Vector2Or3, move: number) {
+      const [slice, twist] = current;
+      const newSlice = (Cube.moveTables.FRtoBR![slice * 24][move] / 24) | 0;
+      const newTwist = Cube.moveTables.twist![twist][move];
+      return newTwist * N_SLICE1 + newSlice;
+    },
+  ],
+  sliceFlip: [
+    1,
+    N_SLICE1 * N_FLIP,
+    (index: number) => [index % N_SLICE1, (index / N_SLICE1) | 0],
+    function (current: Vector2Or3, move: number) {
+      const [slice, flip] = current;
+      const newSlice = (Cube.moveTables.FRtoBR![slice * 24][move] / 24) | 0;
+      const newFlip = Cube.moveTables.flip![flip][move];
+      return newFlip * N_SLICE1 + newSlice;
+    },
+  ],
+  sliceURFtoDLFParity: [
+    2,
+    N_SLICE2 * N_URFtoDLF * N_PARITY,
+    (index: number) => [
+      index % 2,
+      ((index / 2) | 0) % N_SLICE2,
+      (((index / 2) | 0) / N_SLICE2) | 0,
+    ],
+    function (current: Vector2Or3, move: number) {
+      const [parity, slice, URFtoDLF] = current;
+      const newParity = Cube.moveTables.parity[parity][move];
+      const newSlice = Cube.moveTables.FRtoBR![slice][move];
+      const newURFtoDLF = Cube.moveTables.URFtoDLF![URFtoDLF!][move];
+      return (newURFtoDLF * N_SLICE2 + newSlice) * 2 + newParity;
+    },
+  ],
+  sliceURtoDFParity: [
+    2,
+    N_SLICE2 * N_URtoDF * N_PARITY,
+    (index: number) => [
+      index % 2,
+      ((index / 2) | 0) % N_SLICE2,
+      (((index / 2) | 0) / N_SLICE2) | 0,
+    ],
+    function (current: Vector2Or3, move: number) {
+      const [parity, slice, URtoDF] = current;
+      const newParity = Cube.moveTables.parity[parity][move];
+      const newSlice = Cube.moveTables.FRtoBR![slice][move];
+      const newURtoDF = Cube.moveTables.URtoDF![URtoDF!][move];
+      return (newURtoDF * N_SLICE2 + newSlice) * 2 + newParity;
+    },
+  ],
+};
+
+function computeMoveTables(...tables: any[]) {
+  if (tables.length === 0) {
+    tables = (() => {
+      const result = [];
+      for (let name in moveTableParams) {
+        result.push(name);
+      }
+      return result;
+    })();
+  }
+
+  for (let tableName of tables) {
+    // Already computed
+    if (Cube.moveTables[tableName] !== null) {
+      continue;
+    }
+
+    if (tableName === 'mergeURtoDF') {
+      this.moveTables.mergeURtoDF = (() =>
+        range(0, 335, true).map((URtoUL: number) =>
+          range(0, 335, true).map((UBtoDF: number) => mergeURtoDF(URtoUL, UBtoDF)),
+        ))();
+    } else {
+      const [scope, size] = moveTableParams[tableName];
+      this.moveTables[tableName] = computeMoveTable(scope, tableName, size);
+    }
+  }
+
+  return this;
+}
+
+function computePruningTables(...tables: string[]) {
+  if (tables.length === 0) tables = [...Object.keys(pruningTableParams)];
+
+  for (let tableName of tables) {
+    // Already computed
+    if (this.pruningTables[tableName] !== null) continue;
+
+    const params = pruningTableParams[tableName];
+    this.pruningTables[tableName] = computePruningTable(...params);
+  }
+
+  return this;
+}
+
+function computeMoveTable(context: string, coord: string | number, size: number) {
+  // Loop through all valid values for the coordinate, setting cube's
+  // state in each iteration. Then apply each of the 18 moves to the
+  // cube, and compute the resulting coordinate.
+  const apply = context === 'corners' ? 'cornerMultiply' : 'edgeMultiply';
+
+  const cube = new Cube();
+
+  const result = [];
+  for (let i = 0, end = size - 1, asc = 0 <= end; asc ? i <= end : i >= end; asc ? i++ : i--) {
+    cube[coord](i);
+    const inner = [];
+    for (let j = 0; j <= 5; j++) {
+      const move = moveList[j];
+      for (let k = 0; k <= 2; k++) {
+        cube[apply](move);
+        inner.push(cube[coord]());
+      }
+      // 4th face turn restores the cube
+      cube[apply](move);
+    }
+    result.push(inner);
+  }
+  return result;
+}
 
 class Cube {
   // Todo: check if reallocation or modification. I think it is safe
@@ -27,11 +213,11 @@ class Cube {
   newCo = [0, 0, 0, 0, 0, 0, 0];
   newEo = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
 
-  center: number[];
-  co: number[];
-  ep: number[];
-  cp: number[];
-  eo: number[];
+  center!: number[];
+  co!: number[];
+  ep!: number[];
+  cp!: number[];
+  eo!: number[];
 
   constructor(other: Cube | null = null) {
     if (other != null) {
@@ -338,6 +524,144 @@ class Cube {
       return result[0];
     }
   }
+
+  // Permutation of the six corners URF, UFL, ULB, UBR, DFR, DLF
+  URFtoDLF = permutationIndex('corners', URF, DLF);
+
+  // Permutation of the three edges UR, UF, UL
+  URtoUL = permutationIndex('edges', UR, UL);
+
+  // Permutation of the three edges UB, DR, DF
+  UBtoDF = permutationIndex('edges', UB, DF);
+
+  // Permutation of the six edges UR, UF, UL, UB, DR, DF
+  URtoDF = permutationIndex('edges', UR, DF);
+
+  // Permutation of the equator slice edges FR, FL, BL and BR
+  FRtoBR = permutationIndex('edges', FR, BR, true);
+  // The twist of the 8 corners, 0 <= twist < 3^7. The orientation of
+  // the DRB corner is fully determined by the orientation of the other
+  // corners.
+  twist(twist: number | null = null): number | this {
+    if (twist != null) {
+      let parity = 0;
+      for (let i = 6; i >= 0; i--) {
+        const ori = twist % 3;
+        twist = (twist / 3) | 0;
+
+        this.co[i] = ori;
+        parity += ori;
+      }
+
+      this.co[7] = (3 - (parity % 3)) % 3;
+      return this;
+    } else {
+      let v = 0;
+      for (let i = 0; i <= 6; i++) {
+        v = 3 * v + this.co[i];
+      }
+      return v;
+    }
+  }
+
+  // The flip of the 12 edges, 0 <= flip < 2^11. The orientation of the
+  // BR edge is fully determined by the orientation of the other edges.
+  flip(flip: number | null = null): number | this {
+    if (flip != null) {
+      let parity = 0;
+      for (let i = 10; i >= 0; i--) {
+        const ori = flip % 2;
+        flip = (flip / 2) | 0;
+
+        this.eo[i] = ori;
+        parity += ori;
+      }
+
+      this.eo[11] = (2 - (parity % 2)) % 2;
+      return this;
+    } else {
+      let v = 0;
+      for (let i = 0; i <= 10; i++) {
+        v = 2 * v + this.eo[i];
+      }
+      return v;
+    }
+  }
+
+  // Parity of the corner permutation
+  cornerParity(): number {
+    let s = 0;
+    for (let i = DRB, end = URF + 1, asc = DRB <= end; asc ? i <= end : i >= end; asc ? i++ : i--) {
+      for (
+        let start = i - 1, j = start, end1 = URF, asc1 = start <= end1;
+        asc1 ? j <= end1 : j >= end1;
+        asc1 ? j++ : j--
+      ) {
+        if (this.cp[j] > this.cp[i]) {
+          s++;
+        }
+      }
+    }
+
+    return s % 2;
+  }
+
+  // Parity of the edge permutation. Parity of corners and edges are
+  // the same if the cube is solvable.
+  edgeParity() {
+    let s = 0;
+    for (let i = BR, end = UR + 1, asc = BR <= end; asc ? i <= end : i >= end; asc ? i++ : i--) {
+      for (
+        let start = i - 1, j = start, end1 = UR, asc1 = start <= end1;
+        asc1 ? j <= end1 : j >= end1;
+        asc1 ? j++ : j--
+      ) {
+        if (this.ep[j] > this.ep[i]) {
+          s++;
+        }
+      }
+    }
+
+    return s % 2;
+  }
+
+  static pruningTables: Record<string, PruningTableParam | null> = {
+    sliceTwist: null,
+    sliceFlip: null,
+    sliceURFtoDLFParity: null,
+    sliceURtoDFParity: null,
+  };
+
+  static initSolver() {
+    computeMoveTables();
+    return computePruningTables();
+  }
+
+  solveUpright = solveUpright;
+
+  solve(maxDepth: number | null = null): string | null {
+    if (maxDepth == null) {
+      maxDepth = 22;
+    }
+    const clone = this.clone();
+    const upright = clone.upright();
+    clone.move(upright);
+    const rotation = new Cube().move(upright).center;
+    const uprightSolution = clone.solveUpright(maxDepth);
+
+    if (uprightSolution == null) return null;
+
+    const solution = [];
+    for (let move of uprightSolution.split(' ')) {
+      solution.push(faceNames[rotation[faceNums[move[0]]]]);
+      if (move.length > 1) {
+        solution[solution.length - 1] += move[1];
+      }
+    }
+    return solution.join(' ');
+  }
+
+  static scramble = () => Cube.inverse(Cube.random().solve()!);
 }
 
 export default Cube;

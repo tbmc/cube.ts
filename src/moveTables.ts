@@ -27,3 +27,18 @@ export const moveTableParams = {
   UBtoDF: ['edges', N_UBtoDF],
   mergeURtoDF: [], // handled specially
 };
+
+const moveTables = {
+  parity: [
+    [1, 0, 1, 1, 0, 1, 1, 0, 1, 1, 0, 1, 1, 0, 1, 1, 0, 1],
+    [0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0],
+  ],
+  twist: null,
+  flip: null,
+  FRtoBR: null,
+  URFtoDLF: null,
+  URtoDF: null,
+  URtoUL: null,
+  UBtoDF: null,
+  mergeURtoDF: null,
+};

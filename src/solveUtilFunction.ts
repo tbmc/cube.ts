@@ -67,7 +67,7 @@ export function permutationIndex(
   start: number,
   end: number,
   fromEnd: boolean | null = null,
-): (ibdex: number) => number {
+): (index?: number | undefined) => number {
   let maxAll: number, permName: string;
 
   if (fromEnd == null) {
@@ -86,7 +86,7 @@ export function permutationIndex(
 
   const our = Array(maxOur + 1).fill(0);
 
-  return function (index: number) {
+  return (index: number | undefined = undefined) => {
     if (index != null) {
       // Reset our to [start..end]
       for (let i = 0; i <= maxOur; i++) our[i] = i + start;
