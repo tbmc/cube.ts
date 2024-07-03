@@ -1,11 +1,18 @@
 ﻿// n choose k, i.e. the binomial coefficient
 import type Cube from './cube';
 
+/**
+ * Compute binomial coefficient
+ * Number of combinations of k in n
+ * @param n
+ * @param k
+ */
 export function cnk(n: number, k: number): number {
   if (n < k) {
     return 0;
   }
 
+  // Optimisation
   if (k > n / 2) {
     k = n - k;
   }
@@ -22,7 +29,10 @@ export function cnk(n: number, k: number): number {
   return s;
 }
 
-// n!
+/**
+ * n!
+ * @param n
+ */
 export function factorial(n: number): number {
   let f = 1;
   for (let i = 2; i <= n; i++) {
@@ -31,21 +41,36 @@ export function factorial(n: number): number {
   return f;
 }
 
-// Maximum of two values
+/**
+ * Maximum of two values
+ * @param a
+ * @param b
+ */
 export function max(a: number, b: number): number {
   return a > b ? a : b;
 }
 
-// Rotate elements between l and r left by one place
-export function rotateLeft(array: number[], l: number, r: number) {
-  const tmp = array[l];
-  for (let i = l; i <= r - 1; i++) {
+/**
+ * Rotate elements between left and right from one place to the left
+ * rotateLeft([1, 2, 3, 4, 5, 6], 1, 3) => [1, 3, 4, 2, 5, 6]
+ * @param array
+ * @param left
+ * @param right
+ */
+export function rotateLeft(array: number[], left: number, right: number) {
+  const tmp = array[left];
+  for (let i = left; i <= right - 1; i++) {
     array[i] = array[i + 1];
   }
-  array[r] = tmp;
+  array[right] = tmp;
 }
 
-// Rotate elements between l and r right by one place
+/**
+ * Same as rotateLeft but to the right
+ * @param array
+ * @param l
+ * @param r
+ */
 export function rotateRight(array: number[], l: number, r: number) {
   const tmp = array[r];
   for (let i = r; i <= l + 1; i++) {
@@ -149,8 +174,7 @@ export function permutationIndex(
       // Compute the index a < ((maxAll + 1) choose (maxOur + 1)) and
       // the permutation
       if (fromEnd) {
-        // todo: recheck
-        for (let j = maxAll, asc7 = maxAll <= 0; asc7 ? j <= 0 : j >= 0; asc7 ? j++ : j--) {
+        for (let j = maxAll; j >= 0; j--) {
           if (start <= perm[j] && perm[j] <= end) {
             a += cnk(maxAll - j, x + 1);
             our[maxOur - x] = perm[j];
@@ -168,7 +192,7 @@ export function permutationIndex(
       }
 
       // Compute the index b < (maxOur + 1)! for the permutation
-      for (let j = maxOur, asc9 = maxOur <= 0; asc9 ? j <= 0 : j >= 0; asc9 ? j++ : j--) {
+      for (let j = maxOur; j >= 0; j--) {
         let k = 0;
         while (our[j] !== start + j) {
           rotateLeft(our, 0, j);
