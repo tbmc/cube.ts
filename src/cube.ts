@@ -584,7 +584,7 @@ function computeMoveTable(
   const cube = new Cube();
 
   const result = [];
-  for (let i = 0, end = size - 1, asc = 0 <= end; asc ? i <= end : i >= end; asc ? i++ : i--) {
+  for (let i = 0; i <= size - 1; i++) {
     cube[coord](i);
     const inner: AllMoveTablePossibleTypes[] = [];
     for (let j = 0; j <= 5; j++) {
