@@ -4,6 +4,8 @@ import Cube from './cube';
 describe('Cube', function () {
   it('should serialize a cube to string for a default cube', function () {
     const cube = new Cube();
+    const dat = cube.asString();
+    const exp = 'UUUUUUUUURRRRRRRRRFFFFFFFFFDDDDDDDDDLLLLLLLLLBBBBBBBBB';
     return expect(cube.asString()).toBe('UUUUUUUUURRRRRRRRRFFFFFFFFFDDDDDDDDDLLLLLLLLLBBBBBBBBB');
   });
 
@@ -32,7 +34,7 @@ describe('Cube', function () {
     return expect(cube.asString()).toBe('UUUUUUUUUBBBRRRRRRRRRFFFFFFDDDDDDDDDFFFLLLLLLLLLBBBBBB');
   });
 
-  it('should rotate cuve face when apply a moves sequence', function () {
+  it('should rotate cube face when apply a moves sequence', function () {
     const cube = new Cube();
     cube.move("U R F' L'");
     return expect(cube.asString()).toBe('DURRUFRRRBRBDRBDRBFDDDFFDFFBLLBDBLDLFUUFLLFLLULRUBUUBU');

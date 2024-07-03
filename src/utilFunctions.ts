@@ -1,6 +1,6 @@
 ﻿import { range } from './range';
 import { faceNums } from './contants';
-import Cube from './cube';
+import type Cube from './cube';
 
 export const randInt = (min: number, max: number) =>
   min + Math.floor(Math.random() * (max - min + 1));

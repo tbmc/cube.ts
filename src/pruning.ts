@@ -2,13 +2,106 @@
 import { range } from './range';
 import { allMoves2 } from './contants';
 import { Vector2Or3 } from './types';
+import {
+  moveTables,
+  N_FLIP,
+  N_PARITY,
+  N_SLICE1,
+  N_SLICE2,
+  N_TWIST,
+  N_URFtoDLF,
+  N_URtoDF,
+} from './moveTables';
+
+export const pruningTables: Record<string, PruningTableParam | null> = {
+  sliceTwist: null,
+  sliceFlip: null,
+  sliceURFtoDLFParity: null,
+  sliceURtoDFParity: null,
+};
+
+type PruningTableParam = [
+  number,
+  number,
+  (index: number) => Vector2Or3,
+  (current: Vector2Or3, move: number) => number,
+];
+const pruningTableParams: Record<string, PruningTableParam> = {
+  // name: [phase, size, currentCoords, nextIndex]
+  sliceTwist: [
+    1,
+    N_SLICE1 * N_TWIST,
+    (index: number) => [index % N_SLICE1, (index / N_SLICE1) | 0],
+    function (current: Vector2Or3, move: number) {
+      const [slice, twist] = current;
+      const newSlice = (moveTables.FRtoBR![slice * 24][move] / 24) | 0;
+      const newTwist = moveTables.twist![twist][move];
+      return newTwist * N_SLICE1 + newSlice;
+    },
+  ],
+  sliceFlip: [
+    1,
+    N_SLICE1 * N_FLIP,
+    (index: number) => [index % N_SLICE1, (index / N_SLICE1) | 0],
+    function (current: Vector2Or3, move: number) {
+      const [slice, flip] = current;
+      const newSlice = (moveTables.FRtoBR![slice * 24][move] / 24) | 0;
+      const newFlip = moveTables.flip![flip][move];
+      return newFlip * N_SLICE1 + newSlice;
+    },
+  ],
+  sliceURFtoDLFParity: [
+    2,
+    N_SLICE2 * N_URFtoDLF * N_PARITY,
+    (index: number) => [
+      index % 2,
+      ((index / 2) | 0) % N_SLICE2,
+      (((index / 2) | 0) / N_SLICE2) | 0,
+    ],
+    function (current: Vector2Or3, move: number) {
+      const [parity, slice, URFtoDLF] = current;
+      const newParity = moveTables.parity[parity][move];
+      const newSlice = moveTables.FRtoBR![slice][move];
+      const newURFtoDLF = moveTables.URFtoDLF![URFtoDLF!][move];
+      return (newURFtoDLF * N_SLICE2 + newSlice) * 2 + newParity;
+    },
+  ],
+  sliceURtoDFParity: [
+    2,
+    N_SLICE2 * N_URtoDF * N_PARITY,
+    (index: number) => [
+      index % 2,
+      ((index / 2) | 0) % N_SLICE2,
+      (((index / 2) | 0) / N_SLICE2) | 0,
+    ],
+    function (current: Vector2Or3, move: number) {
+      const [parity, slice, URtoDF] = current;
+      const newParity = moveTables.parity[parity][move];
+      const newSlice = moveTables.FRtoBR![slice][move];
+      const newURtoDF = moveTables.URtoDF![URtoDF!][move];
+      return (newURtoDF * N_SLICE2 + newSlice) * 2 + newParity;
+    },
+  ],
+};
+
+export function computePruningTables(...tables: string[]) {
+  if (tables.length === 0) tables = [...Object.keys(pruningTableParams)];
+
+  for (let tableName of tables) {
+    // Already computed
+    if (pruningTables[tableName] !== null) continue;
+
+    const params = pruningTableParams[tableName];
+    pruningTables[tableName] = computePruningTable(...params);
+  }
+}
 
 // Phase 1: All moves are valid
-const allMoves1 = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17];
+export const allMoves1 = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17];
 
 // The list of next valid phase 1 moves when the given face was turned
 // in the last move
-const nextMoves1 = (() => {
+export const nextMoves1 = (() => {
   const result = [];
   for (let lastFace = 0; lastFace <= 5; lastFace++) {
     const next = [];
@@ -28,7 +121,7 @@ const nextMoves1 = (() => {
   return result;
 })();
 
-const nextMoves2 = (() => {
+export const nextMoves2 = (() => {
   const result = [];
   for (let lastFace = 0; lastFace <= 5; lastFace++) {
     const next = [];
@@ -46,7 +139,7 @@ const nextMoves2 = (() => {
   return result;
 })();
 
-function pruning(table: number[], index: number, value: number | null = null) {
+export function pruning(table: number[], index: number, value: number | null = null) {
   const pos = index % 8;
   const slot = index >> 3;
   const shift = pos << 2;

@@ -1,7 +1,8 @@
 ﻿import Cube from './cube';
-import { N_PARITY, N_SLICE1, N_SLICE2 } from './moveTables';
+import { moveTables, N_PARITY, N_SLICE1, N_SLICE2 } from './moveTables';
 import { max } from './solveUtilFunction';
 import { allMoves2 } from './contants';
+import { allMoves1, nextMoves1, nextMoves2, pruning, pruningTables } from './pruning';
 
 export class State {
   parent: any;
@@ -45,9 +46,9 @@ export class State {
     return this;
   }
 
-  solution() {
+  solution(moveNames: string[]): string {
     if (this.parent) {
-      return this.parent.solution() + moveNames[this.lastMove] + ' ';
+      return this.parent.solution(moveNames) + moveNames[this.lastMove] + ' ';
     } else {
       return '';
     }
@@ -56,11 +57,11 @@ export class State {
   //# Helpers
 
   move(table: string, index: number, move: string | number) {
-    return Cube.moveTables[table][index][move];
+    return moveTables[table][index][move];
   }
 
   pruning(table: string, index: any) {
-    return pruning(Cube.pruningTables[table], index);
+    return pruning(pruningTables[table], index);
   }
 
   //# Phase 1
@@ -88,8 +89,8 @@ export class State {
   }
 
   // Compute the next phase 1 state for the given move
-  next1(move: any) {
-    const next = freeStates.pop();
+  next1(freeStates: State[], move: number) {
+    const next = freeStates.pop()!;
     next.parent = this;
     next.lastMove = move;
     next.depth = this.depth + 1;
@@ -151,8 +152,8 @@ export class State {
   }
 
   // Compute the next phase 2 state for the given move
-  next2(move: any) {
-    const next = freeStates.pop();
+  next2(freeStates: State[], move: number) {
+    const next = freeStates.pop()!;
     next.parent = this;
     next.lastMove = move;
     next.depth = this.depth + 1;

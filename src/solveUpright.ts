@@ -1,13 +1,14 @@
 ﻿import { State } from './state';
 import { range } from './range';
 import { allMoves2, faceNames, powerName } from './contants';
+import type Cube from './cube';
 
-export function solveUpright(maxDepth: number | null = null) {
+export function solveUpright(cube: Cube, maxDepth: number | null = null) {
   // Names for all moves, i.e. U, U2, U', F, F2, ...
   if (maxDepth == null) {
     maxDepth = 22;
   }
-  const moveNames = [];
+  const moveNames: string[] = [];
 
   for (let face = 0; face <= 5; face++) {
     for (let power = 0; power <= 2; power++) {
@@ -15,11 +16,11 @@ export function solveUpright(maxDepth: number | null = null) {
     }
   }
 
-  let solution = null;
+  let solution: string | null = null;
 
   function phase1search(state: State) {
     const result = [];
-    for (let depth = 1; depth <= maxDepth; depth++) {
+    for (let depth = 1; depth <= maxDepth!; depth++) {
       phase1(state, depth);
       if (solution !== null) {
         break;
@@ -44,7 +45,7 @@ export function solveUpright(maxDepth: number | null = null) {
       if (state.minDist1() <= depth) {
         const result = [];
         for (let move of state.moves1()) {
-          const next = state.next1(move);
+          const next = state.next1(freeStates, move);
           phase1(next, depth - 1);
           freeStates.push(next);
           if (solution !== null) {
@@ -63,7 +64,7 @@ export function solveUpright(maxDepth: number | null = null) {
     state.init2();
 
     const result = [];
-    for (let depth = 1; depth <= maxDepth; depth++) {
+    for (let depth = 1; depth <= maxDepth!; depth++) {
       phase2(state, depth);
       if (solution !== null) {
         break;
@@ -77,13 +78,13 @@ export function solveUpright(maxDepth: number | null = null) {
   function phase2(state: State, depth: number) {
     if (depth === 0) {
       if (state.minDist2() === 0) {
-        return (solution = state.solution());
+        return (solution = state.solution(moveNames));
       }
     } else if (depth > 0) {
       if (state.minDist2() <= depth) {
         const result = [];
         for (let move of state.moves2()) {
-          const next = state.next2(move);
+          const next = state.next2(freeStates, move);
           phase2(next, depth - 1);
           freeStates.push(next);
           if (solution !== null) {
@@ -97,14 +98,14 @@ export function solveUpright(maxDepth: number | null = null) {
     }
   }
 
-  const freeStates = range(0, maxDepth + 1, true).map((x: any) => new State());
-  const state = freeStates.pop().init(this);
-  phase1search(state);
-  freeStates.push(state);
+  const freeStates = range(0, maxDepth + 1, true).map((x: number) => new State());
+  const newState = freeStates.pop()!.init(cube);
+  phase1search(newState);
+  freeStates.push(newState);
 
   if (solution == null) {
     return null;
   }
   // Trim the trailing space and return
-  return solution.trim();
+  return (solution as string).trim();
 }

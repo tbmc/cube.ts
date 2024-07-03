@@ -1,4 +1,6 @@
-﻿export const N_TWIST = 2187; // 3^7 corner orientations
+﻿import type Cube from './cube';
+
+export const N_TWIST = 2187; // 3^7 corner orientations
 export const N_FLIP = 2048; // 2^11 possible edge flips
 export const N_PARITY = 2; // 2 possible parities
 
@@ -15,20 +17,24 @@ export const N_URtoDF = 20160; // 8!/(8-6)! permutation of UR..DF edges in phase
 export const N_URtoUL = 1320; // 12!/(12-3)! permutations of UR..UL edges
 export const N_UBtoDF = 1320; // 12!/(12-3)! permutations of UB..DF edges
 
-// Other move tables are computed on the fly
-export const moveTableParams = {
-  // name: [scope, size]
-  twist: ['corners', N_TWIST],
-  flip: ['edges', N_FLIP],
-  FRtoBR: ['edges', N_FRtoBR],
-  URFtoDLF: ['corners', N_URFtoDLF],
-  URtoDF: ['edges', N_URtoDF],
-  URtoUL: ['edges', N_URtoUL],
-  UBtoDF: ['edges', N_UBtoDF],
-  mergeURtoDF: [], // handled specially
+export type AllMoveTablePossibleTypes =
+  | number
+  | Cube
+  | null
+  | ((index?: number | undefined) => number);
+type MoveTablesType = {
+  parity: [number[], number[]];
+  twist: number | Cube | null | AllMoveTablePossibleTypes[][];
+  flip: number | Cube | null | AllMoveTablePossibleTypes[][];
+  FRtoBR: ((index?: number | undefined) => number) | null | AllMoveTablePossibleTypes[][];
+  URFtoDLF: ((index?: number | undefined) => number) | null | AllMoveTablePossibleTypes[][];
+  URtoDF: ((index?: number | undefined) => number) | null | AllMoveTablePossibleTypes[][];
+  URtoUL: ((index?: number | undefined) => number) | null | AllMoveTablePossibleTypes[][];
+  UBtoDF: ((index?: number | undefined) => number) | null | AllMoveTablePossibleTypes[][];
+  mergeURtoDF: any;
 };
 
-const moveTables = {
+export const moveTables: MoveTablesType = {
   parity: [
     [1, 0, 1, 1, 0, 1, 1, 0, 1, 1, 0, 1, 1, 0, 1, 1, 0, 1],
     [0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0],

@@ -1,20 +1,20 @@
 # cube.js
 
-[![Build Status](https://travis-ci.org/ldez/cubejs.svg?branch=master)](https://travis-ci.org/ldez/cubejs)
-[![npm version](https://badge.fury.io/js/cubejs.svg)](https://www.npmjs.com/package/cubejs)
+[![Build Status]()]()
+[![npm version]()]()
 
-**cube.js** is a JavaScript library for modeling and solving the 3x3x3 Rubik's Cube.
+**cube.ts** is a JavaScript library for modeling and solving the 3x3x3 Rubik's Cube.
 
 Most notably, it implements [Herbert Kociemba's two-phase algorithm](http://kociemba.org/cube.htm) for solving any state of the
 cube very fast in 22 moves or less.
 
-**cube.js** is written in [CoffeeScript](http://coffeescript.org/), and runs on [node.js](http://nodejs.org/) and modern browsers.
+**cube.ts** is written in [CoffeeScript](http://coffeescript.org/), and runs on [node.js](http://nodejs.org/) and modern browsers.
 
-A full-fledged random state scrambler demo is available [here](http://ldez.github.io/cubejs/).
+A full-fledged random state scrambler demo is available [here](http://ldez.github.io/cube.ts/).
 
 ## Examples
 
-`cube.js` gives you basic cube manipulation:
+`cube.ts` gives you basic cube manipulation:
 
 - Web:
 

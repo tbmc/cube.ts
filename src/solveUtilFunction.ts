@@ -1,4 +1,6 @@
 ﻿// n choose k, i.e. the binomial coefficient
+import type Cube from './cube';
+
 export function cnk(n: number, k: number): number {
   if (n < k) {
     return 0;
@@ -67,8 +69,8 @@ export function permutationIndex(
   start: number,
   end: number,
   fromEnd: boolean | null = null,
-): (index?: number | undefined) => number {
-  let maxAll: number, permName: string;
+): (cube: Cube, index?: number | undefined) => Cube | number {
+  let maxAll: number, permName: 'cp' | 'ep';
 
   if (fromEnd == null) {
     fromEnd = false;
@@ -86,7 +88,7 @@ export function permutationIndex(
 
   const our = Array(maxOur + 1).fill(0);
 
-  return (index: number | undefined = undefined) => {
+  return (cube: Cube, index: number | undefined = undefined): Cube | number => {
     if (index != null) {
       // Reset our to [start..end]
       for (let i = 0; i <= maxOur; i++) our[i] = i + start;
@@ -95,7 +97,7 @@ export function permutationIndex(
       let a = (index / maxB) | 0; // combination
 
       // Invalidate all edges
-      const perm = this[permName];
+      const perm = cube[permName];
       for (let i = 0; i <= maxOur; i++) {
         perm[i] = -1;
       }
@@ -134,9 +136,9 @@ export function permutationIndex(
         }
       }
 
-      return this;
+      return cube;
     } else {
-      const perm = this[permName];
+      const perm = cube[permName];
       for (let i = 0; i <= maxOur; i++) {
         our[i] = -1;
       }
